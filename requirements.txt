@@ -1,0 +1,6 @@
+aiohttp
+python-dotenv
+aiosqlite
+discord
+twitchAPI
+tzdata
