@@ -161,8 +161,8 @@ Rules cited: {warning.rules_cited} \n"""
         messages: list[str] = []
         message = "Here are the bans: \n"
         for ban in bans:
-            to_add = f"""Person Banned: {ban.person.display}
-When warned: {ban.time_banned.strftime(r"%m-%d-%Y %H:%M:%S")}
+            to_add = f"""Person banned: {ban.person.display}
+When banned: {ban.time_banned.strftime(r"%m-%d-%Y %H:%M:%S")}
 Reason: {ban.reason}
 Mod responsible: {ban.mod_responsible}"""
             if len(message) + len(to_add) >= 2000:
