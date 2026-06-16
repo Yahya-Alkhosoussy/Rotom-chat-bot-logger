@@ -192,8 +192,8 @@ Mod responsible: {ban.mod_responsible}"""
         messages: list[str] = []
         message = "Here are the timeouts: \n"
         for timeout in timeouts:
-            to_add = f"""Person Banned: {timeout.person.display}
-When warned: {timeout.time_banned.strftime(r"%m-%d-%Y %H:%M:%S")}
+            to_add = f"""Person timed out: {timeout.person.display}
+When timed out: {timeout.time_banned.strftime(r"%m-%d-%Y %H:%M:%S")}
 Reason: {timeout.reason}
 Mod responsible: {timeout.mod_responsible}
 Duration: {timeout.duration}"""
