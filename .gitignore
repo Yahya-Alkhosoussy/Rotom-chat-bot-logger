@@ -54,6 +54,7 @@ cover/
 
 # Databases
 databases/
+tokens/
 
 # Translations
 *.mo
