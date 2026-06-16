@@ -102,6 +102,7 @@ class DavexTwitchBot:
             ban_event.ends_at - ban_event.banned_at,
         )
         await add_timeout(timeout)
+        await self.discord_bot.twitch_moderation_loop.send_timeout_noti(timeout)
 
     async def on_unban(self, unban: ChannelUnbanEvent):
         assert self.discord_bot.twitch_moderation_loop
