@@ -137,8 +137,15 @@ async def add_warning(warning: TwitchWarning):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             """INSERT OR IGNORE INTO warnings
-            (person_warned, reason, rules_cited, time) VALUES (?, ?, ?, ?, ?)""",
-            (warning.person, warning.reason, warning.rules_cited, warning.time_of_warning.strftime(r"%m-%d-%Y %H:%M:%S")),
+            (person_warned_display, person_warned_login, person_warned_id, reason, rules_cited, time) VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                warning.person.display,
+                warning.person.login,
+                warning.person.id,
+                warning.reason,
+                warning.rules_cited,
+                warning.time_of_warning.strftime(r"%m-%d-%Y %H:%M:%S"),
+            ),
         )
         await conn.commit()
 
@@ -147,10 +154,12 @@ async def add_timeout(timeout: TwitchBan):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             """INSERT OR IGNORE INTO timeout
-            (person, reason, mod_responsible, time, duration) VALUES
-            (?, ?, ?, ?, ?)""",
+            (person_timedout_display, person_timedout_login, person_timedout_id, reason, mod_responsible, time, duration) VALUES
+            (?, ?, ?, ?, ?, ?, ?)""",
             (
-                timeout.person,
+                timeout.person.display,
+                timeout.person.login,
+                timeout.person.id,
                 timeout.reason,
                 timeout.mod_responsible,
                 timeout.time_banned.strftime(r"%m-%d-%Y %H:%M:%S"),
@@ -164,8 +173,15 @@ async def add_ban(ban: TwitchBan):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute(
             """INSERT OR IGNORE INTO bans
-            (person, reason, mod_responsible, time) VALUES (?, ?, ?, ?)""",
-            (ban.person, ban.reason, ban.mod_responsible, ban.time_banned.strftime(r"%m-%d-%Y %H:%M:%S")),
+            (person_banned_display, person_banned_login, person_banned_id, reason, mod_responsible, time) VALUES (?, ?, ?, ?, ?, ?)""",
+            (
+                ban.person.display,
+                ban.person.login,
+                ban.person.display,
+                ban.reason,
+                ban.mod_responsible,
+                ban.time_banned.strftime(r"%m-%d-%Y %H:%M:%S"),
+            ),
         )
         await conn.commit()
 
