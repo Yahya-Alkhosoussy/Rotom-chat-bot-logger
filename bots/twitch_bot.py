@@ -155,14 +155,7 @@ class DavexTwitchBot:
         assert self.bot_twitch
 
         event_data = stream_event.event
-        message = """Greetings Tarnished!
-davexg1GengarHello
-My name is Davex Gundyr and Welcome to my Graveyard!
-davexg1GengarRave
-The stream will start in 20 minutes or less!
-davexg1GengarWobble
-So get a snack or chat amongst yourselves until the show starts!
-davexg1GengarLaugh"""
+        message = "!intro"
         await self.bot_twitch.send_chat_message(
             broadcaster_id=event_data.broadcaster_user_id, sender_id=self.bot_id, message=message
         )
