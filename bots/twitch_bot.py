@@ -7,7 +7,13 @@ from twitchAPI.chat import Chat, ChatMessage, EventData
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticationStorageHelper
-from twitchAPI.object.eventsub import ChannelBanEvent, ChannelChatMessageDeleteEvent, ChannelUnbanEvent, ChannelWarningSendEvent
+from twitchAPI.object.eventsub import (
+    ChannelBanEvent,
+    ChannelChatMessageDeleteEvent,
+    ChannelUnbanEvent,
+    ChannelWarningSendEvent,
+    StreamOnlineEvent,
+)
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 
@@ -144,6 +150,23 @@ class DavexTwitchBot:
         await add_warning(warning)
         await self.discord_bot.twitch_moderation_loop.send_warning_noti(warning)
 
+    async def on_stream_start(self, stream_event: StreamOnlineEvent):
+        assert self.bot_id
+        assert self.bot_twitch
+
+        event_data = stream_event.event
+        message = """Greetings Tarnished!
+davexg1GengarHello
+My name is Davex Gundyr and Welcome to my Graveyard!
+davexg1GengarRave
+The stream will start in 20 minutes or less!
+davexg1GengarWobble
+So get a snack or chat amongst yourselves until the show starts!
+davexg1GengarLaugh"""
+        await self.bot_twitch.send_chat_message(
+            broadcaster_id=event_data.broadcaster_user_id, sender_id=self.bot_id, message=message
+        )
+
     async def run(self):
         try:
             await self.setup()
@@ -166,6 +189,8 @@ class DavexTwitchBot:
             await self.bot_eventsub.listen_channel_chat_message_delete(
                 broadcaster_user_id=self.davex_id, user_id=self.bot_id, callback=self.on_message_delete
             )
+            await self.bot_eventsub.listen_stream_online(broadcaster_user_id=self.davex_id, callback=self.on_stream_start)
+
             self.chat.start()
 
             await asyncio.Event().wait()
