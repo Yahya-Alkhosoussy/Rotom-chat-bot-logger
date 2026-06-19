@@ -24,7 +24,7 @@ from utils import TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
 TARGET_CHANNELS = ["davex_gundyr"]
 
 
-class DavexTwitchModBot:
+class DavexTwitchBot:
     def __init__(
         self, app_id: str, app_secret: str, bot_scope: list[AuthScope], dav_scope: list[AuthScope], discord_bot: DavexDiscordBot
     ):
@@ -35,6 +35,7 @@ class DavexTwitchModBot:
 
         self.dav_eventsub: EventSubWebsocket | None = None
         self.bot_eventsub: EventSubWebsocket | None = None
+        self.stream_eventsub: EventSubWebsocket | None = None
         self.dav_twitch: Twitch | None = None
         self.bot_twitch: Twitch | None = None
         self.chat: Chat | None = None
@@ -63,6 +64,8 @@ class DavexTwitchModBot:
 
         main_loop = asyncio.get_event_loop()
 
+        self.stream_eventsub = EventSubWebsocket(self.dav_twitch)
+        self.stream_eventsub.start()
         self.dav_eventsub = EventSubWebsocket(self.dav_twitch, callback_loop=main_loop)
         self.dav_eventsub.start()
         self.bot_eventsub = EventSubWebsocket(self.bot_twitch, callback_loop=main_loop)
@@ -150,6 +153,19 @@ class DavexTwitchModBot:
         await add_warning(warning)
         await self.discord_bot.twitch_moderation_loop.send_warning_noti(warning)
 
+    async def on_stream_start(self, stream_event: StreamOnlineEvent):
+        assert self.bot_id
+        assert self.bot_twitch
+
+        event_data = stream_event.event
+        message = "!intro"
+        await self.bot_twitch.send_chat_message(
+            broadcaster_id=event_data.broadcaster_user_id, sender_id=self.bot_id, message=message
+        )
+
+    async def appear_command(self, ChatCommand: ChatCommand):
+        await ChatCommand.reply(f"{ChatCommand.user.name}, I have appeared in the Graveyard! Thank you kind soul.")
+
     async def run(self):
         try:
             await self.setup()
@@ -160,9 +176,11 @@ class DavexTwitchModBot:
             assert self.bot_eventsub, "Event sub for the bot is None"
             assert self.davex_id, "Davexs ID is still None"
             assert self.bot_id, "Bots ID is still None"
+            assert self.stream_eventsub, "Stream event sub is None"
 
             self.chat.register_event(ChatEvent.READY, self.on_ready)
             self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
+            self.chat.register_command("appear", self.appear_command)
 
             await self.dav_eventsub.listen_channel_ban(broadcaster_user_id=self.davex_id, callback=self.on_ban)
             await self.dav_eventsub.listen_channel_unban(broadcaster_user_id=self.davex_id, callback=self.on_unban)
@@ -172,6 +190,7 @@ class DavexTwitchModBot:
             await self.bot_eventsub.listen_channel_chat_message_delete(
                 broadcaster_user_id=self.davex_id, user_id=self.bot_id, callback=self.on_message_delete
             )
+            await self.stream_eventsub.listen_stream_online(broadcaster_user_id=self.davex_id, callback=self.on_stream_start)
 
             self.chat.start()
 
@@ -184,91 +203,3 @@ class DavexTwitchModBot:
 
 # bot = DavexBot(APP_ID, APP_SECRET, BOT_SCOPES, DAVEX_SCOPES)
 # asyncio.run(bot.run())
-
-
-class DavexTwitchBot:
-    def __init__(self, app_id: str, app_secret: str, bot_scope: list[AuthScope], dav_scope: list[AuthScope]):
-        self.app_id = app_id
-        self.app_secret = app_secret
-        self.bot_scope = bot_scope
-        self.dav_scope = dav_scope
-
-        self.bot_eventsub: EventSubWebsocket | None = None
-        self.dav_twitch: Twitch | None = None
-        self.bot_twitch: Twitch | None = None
-        self.chat: Chat | None = None
-        self.davex_id: str | None = None
-        self.bot_id: str | None = None
-
-    async def setup(self):
-        self.dav_twitch = await Twitch(self.app_id, self.app_secret)
-        dav_twitch_helper = UserAuthenticationStorageHelper(self.dav_twitch, self.dav_scope, Path("tokens/davex_stream.json"))
-        await dav_twitch_helper.bind()
-
-        self.bot_twitch = await Twitch(self.app_id, self.app_secret)
-        bot_twitch_helper = UserAuthenticationStorageHelper(self.bot_twitch, self.bot_scope, Path("tokens/bot_stream.json"))
-        await bot_twitch_helper.bind()
-
-        user = await first(self.bot_twitch.get_users(logins=["davex_gundyr"]))
-        if user is None:
-            raise ValueError("Could not find user: davex_gundyr")
-        self.davex_id = user.id
-
-        user_2 = await first(self.bot_twitch.get_users(logins=["chatbot_rotom"]))
-        if user_2 is None:
-            raise ValueError("Could not find user: chatbot_rotom")
-        self.bot_id = user_2.id
-
-        self.bot_eventsub = EventSubWebsocket(self.bot_twitch)
-        self.bot_eventsub.start()
-
-        self.chat = await Chat(self.bot_twitch)
-
-    async def on_ready(self, ready_event: EventData):
-        print("Bot is ready for work, joining channels")
-        await ready_event.chat.join_room(TARGET_CHANNELS)
-        print("bot has joined the channels")
-
-    async def close_bot(self):
-        if self.chat:
-            self.chat.stop()
-        if self.dav_twitch:
-            await self.dav_twitch.close()
-        if self.bot_twitch:
-            await self.bot_twitch.close()
-
-    async def on_stream_start(self, stream_event: StreamOnlineEvent):
-        assert self.bot_id
-        assert self.bot_twitch
-
-        event_data = stream_event.event
-        message = "!intro"
-        await self.bot_twitch.send_chat_message(
-            broadcaster_id=event_data.broadcaster_user_id, sender_id=self.bot_id, message=message
-        )
-
-    async def appear_command(self, command: ChatCommand):
-        assert command.room
-        await command.reply(f"{command.user.name}, I have appeared in the graveyard! Thank you for summoning me into chat")
-
-    async def run(self):
-        try:
-            await self.setup()
-            assert self.chat, "Chat instance is None"
-            assert self.bot_twitch, "Bot twitch instance is None"
-            assert self.bot_eventsub, "Event sub for the bot is None"
-            assert self.davex_id, "Davexs ID is still None"
-            assert self.bot_id, "Bots ID is still None"
-
-            self.chat.register_event(ChatEvent.READY, self.on_ready)
-            self.chat.register_command("appear", self.appear_command)
-
-            await self.bot_eventsub.listen_stream_online(broadcaster_user_id=self.davex_id, callback=self.on_stream_start)
-
-            self.chat.start()
-
-            await asyncio.Event().wait()
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            await self.close_bot()

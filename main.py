@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from twitchAPI.type import AuthScope
 
 from bots.discord_bot import DavexDiscordBot
-from bots.twitch_bot import DavexTwitchBot, DavexTwitchModBot  # noqa
+from bots.twitch_bot import DavexTwitchBot
 
 load_dotenv()
 
@@ -45,8 +45,7 @@ BOT_SCOPES = [
     AuthScope.MODERATOR_READ_WARNINGS,
 ]
 
-twitch_mod_bot = DavexTwitchModBot(APP_ID, APP_SECRET, BOT_SCOPES, DAVEX_SCOPES, bot)
-twitch_bot = DavexTwitchBot(APP_ID, APP_SECRET, BOT_SCOPES, DAVEX_SCOPES)
+twitch_mod_bot = DavexTwitchBot(APP_ID, APP_SECRET, BOT_SCOPES, DAVEX_SCOPES, bot)
 
 
 @bot.group(name="get")
@@ -81,7 +80,7 @@ async def get_deleted_messages(ctx: commands.Context):
 async def main():
     token = getenv("discord_token")
     assert token
-    await asyncio.gather(bot.start(token=token), twitch_mod_bot.run(), twitch_bot.run(), return_exceptions=True)
+    await asyncio.gather(bot.start(token=token), twitch_mod_bot.run(), return_exceptions=True)
 
 
 if __name__ == "__main__":
