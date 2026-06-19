@@ -193,7 +193,6 @@ class DavexTwitchBot:
         self.bot_scope = bot_scope
         self.dav_scope = dav_scope
 
-        self.dav_eventsub: EventSubWebsocket | None = None
         self.bot_eventsub: EventSubWebsocket | None = None
         self.dav_twitch: Twitch | None = None
         self.bot_twitch: Twitch | None = None
@@ -203,11 +202,11 @@ class DavexTwitchBot:
 
     async def setup(self):
         self.dav_twitch = await Twitch(self.app_id, self.app_secret)
-        dav_twitch_helper = UserAuthenticationStorageHelper(self.dav_twitch, self.dav_scope, Path("tokens/davex.json"))
+        dav_twitch_helper = UserAuthenticationStorageHelper(self.dav_twitch, self.dav_scope, Path("tokens/davex_stream.json"))
         await dav_twitch_helper.bind()
 
         self.bot_twitch = await Twitch(self.app_id, self.app_secret)
-        bot_twitch_helper = UserAuthenticationStorageHelper(self.bot_twitch, self.bot_scope, Path("tokens/bot.json"))
+        bot_twitch_helper = UserAuthenticationStorageHelper(self.bot_twitch, self.bot_scope, Path("tokens/bot_stream.json"))
         await bot_twitch_helper.bind()
 
         user = await first(self.bot_twitch.get_users(logins=["davex_gundyr"]))
@@ -220,8 +219,6 @@ class DavexTwitchBot:
             raise ValueError("Could not find user: chatbot_rotom")
         self.bot_id = user_2.id
 
-        self.dav_eventsub = EventSubWebsocket(self.dav_twitch)
-        self.dav_eventsub.start()
         self.bot_eventsub = EventSubWebsocket(self.bot_twitch)
         self.bot_eventsub.start()
 
@@ -233,8 +230,6 @@ class DavexTwitchBot:
         print("bot has joined the channels")
 
     async def close_bot(self):
-        if self.dav_eventsub:
-            await self.dav_eventsub.stop()
         if self.chat:
             self.chat.stop()
         if self.dav_twitch:
@@ -261,8 +256,6 @@ class DavexTwitchBot:
             await self.setup()
             assert self.chat, "Chat instance is None"
             assert self.bot_twitch, "Bot twitch instance is None"
-            assert self.dav_twitch, "Dav twitch instance is None"
-            assert self.dav_eventsub, "Event sub instance is None"
             assert self.bot_eventsub, "Event sub for the bot is None"
             assert self.davex_id, "Davexs ID is still None"
             assert self.bot_id, "Bots ID is still None"
