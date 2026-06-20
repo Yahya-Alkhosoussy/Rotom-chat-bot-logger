@@ -35,7 +35,6 @@ class DavexTwitchBot:
 
         self.dav_eventsub: EventSubWebsocket | None = None
         self.bot_eventsub: EventSubWebsocket | None = None
-        self.stream_eventsub: EventSubWebsocket | None = None
         self.dav_twitch: Twitch | None = None
         self.bot_twitch: Twitch | None = None
         self.chat: Chat | None = None
@@ -64,8 +63,6 @@ class DavexTwitchBot:
 
         main_loop = asyncio.get_event_loop()
 
-        self.stream_eventsub = EventSubWebsocket(self.dav_twitch)
-        self.stream_eventsub.start()
         self.dav_eventsub = EventSubWebsocket(self.dav_twitch, callback_loop=main_loop)
         self.dav_eventsub.start()
         self.bot_eventsub = EventSubWebsocket(self.bot_twitch, callback_loop=main_loop)
@@ -164,7 +161,11 @@ class DavexTwitchBot:
         )
 
     async def appear_command(self, ChatCommand: ChatCommand):
-        await ChatCommand.reply(f"{ChatCommand.user.name}, I have appeared in the Graveyard! Thank you kind soul.")
+        assert self.bot_twitch
+        assert self.davex_id
+        assert self.bot_id
+        message = f"{ChatCommand.user.name}, I have appeared in the Graveyard! Thank you kind soul."
+        await self.bot_twitch.send_chat_message(broadcaster_id=self.davex_id, sender_id=self.bot_id, message=message)
 
     async def run(self):
         try:
@@ -176,7 +177,6 @@ class DavexTwitchBot:
             assert self.bot_eventsub, "Event sub for the bot is None"
             assert self.davex_id, "Davexs ID is still None"
             assert self.bot_id, "Bots ID is still None"
-            assert self.stream_eventsub, "Stream event sub is None"
 
             self.chat.register_event(ChatEvent.READY, self.on_ready)
             self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
@@ -190,7 +190,7 @@ class DavexTwitchBot:
             await self.bot_eventsub.listen_channel_chat_message_delete(
                 broadcaster_user_id=self.davex_id, user_id=self.bot_id, callback=self.on_message_delete
             )
-            await self.stream_eventsub.listen_stream_online(broadcaster_user_id=self.davex_id, callback=self.on_stream_start)
+            await self.dav_eventsub.listen_stream_online(broadcaster_user_id=self.davex_id, callback=self.on_stream_start)
 
             self.chat.start()
 
