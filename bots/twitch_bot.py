@@ -75,7 +75,7 @@ class DavexTwitchBot:
             message.id,
             TwitchUser(message.user.display_name, message.user.name, message.user.id),
             datetime.fromtimestamp(message.sent_timestamp / 1000, ZoneInfo("America/Chicago")),
-            message_content=message.text,
+            content=message.text,
         )
         await save_message(_message)
         return
@@ -94,6 +94,7 @@ class DavexTwitchBot:
                 ban_event.reason,
                 ban_event.moderator_user_name,
                 ban_event.banned_at,
+                None,
             )
             await add_ban(_ban)
             await self.discord_bot.twitch_moderation_loop.send_ban_noti(_ban)
@@ -136,7 +137,7 @@ class DavexTwitchBot:
             event.message_id,
             TwitchUser(event.target_user_name, event.target_user_login, event.target_user_id),
             DeletedEvent.metadata.message_timestamp,
-            datetime.now(),
+            time_deleted=datetime.now(),
         )
         await save_deleted_message(message)
         await self.discord_bot.twitch_moderation_loop.send_deleted_message(message)
@@ -145,7 +146,7 @@ class DavexTwitchBot:
         assert self.discord_bot.twitch_moderation_loop
         event = warning_event.event
         warning = TwitchWarning(
-            TwitchUser(event.user_name, event.user_login, event.user_id), event.reason, event.chat_rules_cited, datetime.now()
+            TwitchUser(event.user_name, event.user_login, event.user_id), event.reason, datetime.now(), event.chat_rules_cited
         )
         await add_warning(warning)
         await self.discord_bot.twitch_moderation_loop.send_warning_noti(warning)
