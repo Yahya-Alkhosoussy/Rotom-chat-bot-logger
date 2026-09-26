@@ -13,10 +13,10 @@ class TwitchUser:
 @dataclass()
 class TwitchMessage:
     id: str
-    content: str | None
     author: TwitchUser
     time_sent: datetime
-    time_deleted: datetime | None
+    content: str | None = None
+    time_deleted: datetime | None = None
 
     def __post_init__(self):
         self.time_sent = self.time_sent.astimezone(ZoneInfo("America/Chicago"))
@@ -37,7 +37,7 @@ class TwitchBan:
     reason: str
     mod_responsible: str
     time_banned: datetime
-    duration: timedelta | float | None
+    duration: timedelta | float | None = None
 
     def __post_init__(self):
         self.time_banned = self.time_banned.astimezone(ZoneInfo("America/Chicago"))
@@ -56,7 +56,7 @@ class TwitchWarning:
     person: TwitchUser
     reason: str | None
     time_of_warning: datetime
-    rules_cited: str = ""
+    rules_cited: list[str] | str | None = None
 
     def __post_init__(self):
 
