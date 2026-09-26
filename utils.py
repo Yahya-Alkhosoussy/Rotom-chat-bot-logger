@@ -69,3 +69,18 @@ class TwitchWarning:
 
         for rule in self.rules_cited:
             self.rules_cited += rule + "\n"
+
+
+@dataclass()
+class DiscordUser:
+    name: str
+    id: int
+
+
+@dataclass()
+class DiscordMessage:
+    author: DiscordUser
+    content: str
+    time_sent: datetime
+    time_deleted: datetime | None
+    attachment_uris: list[str] | str | None = None
