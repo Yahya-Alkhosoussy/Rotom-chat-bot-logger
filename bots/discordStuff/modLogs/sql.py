@@ -20,7 +20,6 @@ async def init_db():
                 user_id BIGINT NOT NULL,
                 message_content TEXT,
                 image_path TEXT,
-                sent_at TEXT,
                 deleted_at TEXT
             )
             """
@@ -45,8 +44,8 @@ async def add_deleted_message(user: DiscordUser, message: DiscordMessage):
     async with connect(db_path) as conn:
         time_deleted = message.time_deleted.strftime(r"%Y-%m-%d %H:%M") if message.time_deleted else None
         await conn.execute(
-            "INSERT OR IGNORE INTO deleted (username, user_id, message_content, sent_at, deleted_at) VALUES (?, ?, ?, ?, ?)",
-            (user.name, user.id, message.content, message.time_sent.strftime(r"%Y-%m-%d %H:%M"), time_deleted),
+            "INSERT OR IGNORE INTO deleted (username, user_id, message_content, deleted_at) VALUES (?, ?, ?, ?)",
+            (user.name, user.id, message.content, time_deleted),
         )
         if message.attachment_paths is None:
             await conn.commit()
@@ -54,8 +53,8 @@ async def add_deleted_message(user: DiscordUser, message: DiscordMessage):
 
         for attachment_path in message.attachment_paths:
             await conn.execute(
-                "INSERT OR IGNORE INTO deleted (username, user_id, sent_at, deleted_at, image_path) VALUES (?, ?, ?, ?, ?)",
-                (user.name, user.id, message.time_sent.strftime(r"%Y-%m-%d %H:%M"), time_deleted, attachment_path),
+                "INSERT OR IGNORE INTO deleted (username, user_id, deleted_at, image_path) VALUES (?, ?, ?, ?, ?)",
+                (user.name, user.id, time_deleted, attachment_path),
             )
         await conn.commit()
 
@@ -63,18 +62,17 @@ async def add_deleted_message(user: DiscordUser, message: DiscordMessage):
 async def get_deleted_messages(user: DiscordUser) -> list[DiscordMessage]:
     async with connect(db_path) as conn:
         async with conn.execute(
-            "SELECT message_content, image_path, sent_at, deleted_at FROM deleted WHERE user_id=?", (user.id,)
+            "SELECT message_content, image_path, deleted_at FROM deleted WHERE user_id=?", (user.id,)
         ) as cur:
             results = await cur.fetchall()
             messages: list[DiscordMessage] = []
             for result in results:
-                deleted_at: str | None = result[3]
+                deleted_at: str | None = result[2]
                 if deleted_at is None:
                     messages.append(
                         DiscordMessage(
                             user,
                             content=result[0],
-                            time_sent=datetime.strptime(result[2], r"%Y-%m-%d %H:%M"),
                             time_deleted=None,
                             attachment_paths=result[1],
                         )
@@ -86,7 +84,6 @@ async def get_deleted_messages(user: DiscordUser) -> list[DiscordMessage]:
                         DiscordMessage(
                             user,
                             content=result[0],
-                            time_sent=datetime.strptime(result[2], r"%Y-%m-%d %H:%M"),
                             time_deleted=datetime.strptime(deleted_at, r"%Y-%m-%d %H:%M"),
                             attachment_paths=result[1],
                         )
