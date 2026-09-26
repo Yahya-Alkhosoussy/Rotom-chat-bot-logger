@@ -1,12 +1,16 @@
 import asyncio
-from datetime import datetime
+import os
+from datetime import datetime, timezone
+from pathlib import Path
 
+import aiohttp
 import discord
 from discord.ext import commands
 
+from bots.discordStuff.modLogs.sql import add_deleted_message
 from bots.discordStuff.sharedBanLists.sql import check_if_user_in_ban_list, get_banned_member
 from sql import get_bans, get_deleted_messages, get_timeouts, get_warnings
-from utils import TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
+from utils import DiscordMessage, DiscordUser, TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
 
 
 class DavexDiscordBot(commands.Bot):
@@ -57,6 +61,35 @@ class DavexDiscordBot(commands.Bot):
 
     async def on_message(self, message: discord.Message):
         await self.process_commands(message)
+
+    async def download_image(self, attachment: discord.Attachment, file_path: Path):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(attachment.url) as resp:
+                if resp.status == 200:  # image found
+                    with open(file_path, "wb") as f:
+                        f.write(await resp.read())
+
+    async def on_message_delete(self, message: discord.Message):
+        author = DiscordUser(message.author.name, message.author.id)
+        await add_deleted_message(
+            author,
+            DiscordMessage(
+                author,
+                message.content,
+                datetime.now(timezone.utc),
+            ),
+        )
+        for attachment in message.attachments:
+            images_dir = Path("images/")
+            if not images_dir.exists():
+                images_dir.mkdir()
+            filename = f"{message.id}_{attachment.filename}"
+            file_path = os.path.join(images_dir, Path(filename))
+            await self.download_image(attachment, Path(file_path))
+
+            await add_deleted_message(
+                author, DiscordMessage(author, "", datetime.now(timezone.utc), attachment_paths=[file_path])
+            )
 
 
 class TwitchModerationLoop:
