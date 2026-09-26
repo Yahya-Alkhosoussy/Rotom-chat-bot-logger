@@ -1,8 +1,10 @@
+import asyncio
 from datetime import datetime
 
 import discord
 from discord.ext import commands
 
+from bots.discordStuff.sharedBanLists.sql import check_if_user_in_ban_list, get_banned_member
 from sql import get_bans, get_deleted_messages, get_timeouts, get_warnings
 from utils import TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
 
@@ -11,13 +13,47 @@ class DavexDiscordBot(commands.Bot):
     def __init__(self, intents: discord.Intents, **kwargs):
         super().__init__(command_prefix="!", intents=intents, **kwargs)
         self.twitch_moderation_loop: TwitchModerationLoop | None = None
+        self.mod_channel: discord.abc.GuildChannel | discord.Thread | discord.abc.PrivateChannel | None = None
 
     async def on_ready(self):
         assert self.user is not None
         self.twitch_moderation_loop = TwitchModerationLoop(self)
+        self.mod_channel = self.get_channel(1516090780173860914)
+        assert isinstance(self.mod_channel, discord.TextChannel), "Discord channel is the wrong type"
         print("")
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("----------------------------------------------")
+
+    async def on_member_join(self, member: discord.Member):
+        assert isinstance(self.mod_channel, discord.TextChannel), "Discord channel is the wrong type"
+
+        is_user_in_banlist = await check_if_user_in_ban_list(member)
+        if is_user_in_banlist:
+            await self.mod_channel.send(
+                f"Detected someone who joined who is in the shared ban list! User {member.name}. More details:"
+            )
+            banned_member = await get_banned_member(member)
+            await self.mod_channel.send(
+                f"{banned_member.name} had been banned from {banned_member.initial_server_ban} for {banned_member.reason}"
+                "Should I go ahead and ban them here? (Reply with `!confirm` to ban them or `!deny` to not ban them. "
+                "Please reply within 2 days.)"
+            )
+
+            def check(m: discord.Message):
+                assert isinstance(self.mod_channel, discord.TextChannel)  # for type saftey purposes
+                return (m.content == "!confirm" or m.content == "!deny") and (m.channel == self.mod_channel)
+
+            try:
+                reply = await self.wait_for("message", check=check, timeout=2 * 24 * 60 * 60)  # 48 hours
+            except asyncio.TimeoutError:
+                await self.mod_channel.send(f"Got no reply. {member.name} will not be banned.")
+                return
+            if reply.content == "!deny":
+                await self.mod_channel.send(f"Request denied successfully. {member.name} will not be banned.")
+                return
+            await self.mod_channel.send(f"Request to ban {member.name} acknowledged. Starting ban process...")
+            await member.ban(reason=banned_member.reason)
+            await self.mod_channel.send(f"{member.name} successfully banned.")
 
     async def on_message(self, message: discord.Message):
         await self.process_commands(message)
