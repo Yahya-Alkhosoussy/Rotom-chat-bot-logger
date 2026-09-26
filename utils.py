@@ -83,4 +83,4 @@ class DiscordMessage:
     content: str
     time_sent: datetime
     time_deleted: datetime | None
-    attachment_paths: list[str] | None = None
+    attachment_paths: list[str | None] | None = None
