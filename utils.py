@@ -1,62 +1,71 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
+@dataclass()
 class TwitchUser:
-    def __init__(self, display: str, login: str, id: str):
-        self.display = display
-        self.login = login
-        self.id = id
+    display: str
+    login: str
+    id: str
 
 
+@dataclass()
 class TwitchMessage:
-    def __init__(
-        self,
-        message_id: str,
-        author: TwitchUser,
-        when_sent: datetime,
-        when_deleted: datetime | None = None,
-        message_content: str | None = None,
-    ):
-        self.id = message_id
-        self.content = message_content
-        self.author = author
-        self.time_sent = when_sent.astimezone(ZoneInfo("America/Chicago"))
-        self.time_deleted = when_deleted.astimezone(ZoneInfo("America/Chicago")) if when_deleted else None
+    id: str
+    content: str | None
+    author: TwitchUser
+    time_sent: datetime
+    time_deleted: datetime | None
+
+    def __post_init__(self):
+        self.time_sent = self.time_sent.astimezone(ZoneInfo("America/Chicago"))
+        self.time_deleted = self.time_deleted.astimezone(ZoneInfo("America/Chicago")) if self.time_deleted else None
 
 
+@dataclass()
 class TwitchBan:
-    def __init__(
-        self,
-        banned_person: TwitchUser,
-        reason_for_ban: str,
-        mod_responsible: str,
-        time_banned: datetime,
-        duration: timedelta | None = None,
-    ):
-        self.person = banned_person
-        self.reason = reason_for_ban
-        self.mod_responsible = mod_responsible
-        self.time_banned = time_banned.astimezone(ZoneInfo("America/Chicago"))
-        self.duration = duration.total_seconds() if duration else None
+    # def __init__(
+    #     self,
+    #     banned_person: TwitchUser,
+    #     reason_for_ban: str,
+    #     mod_responsible: str,
+    #     time_banned: datetime,
+    #     duration: timedelta | None = None,
+    # ):
+    person: TwitchUser
+    reason: str
+    mod_responsible: str
+    time_banned: datetime
+    duration: timedelta | float | None
+
+    def __post_init__(self):
+        self.time_banned = self.time_banned.astimezone(ZoneInfo("America/Chicago"))
+        self.duration = self.duration.total_seconds() if isinstance(self.duration, timedelta) else self.duration
 
 
+@dataclass()
 class TwitchWarning:
-    def __init__(
-        self,
-        person_warned: TwitchUser,
-        reason_for_warning: str | None,
-        rules_cited: list[str] | None,
-        time_of_warning: datetime,
-    ):
-        self.person = person_warned
-        self.reason = reason_for_warning if reason_for_warning else "No Reason given"
-        self.rules_cited: str = ""
-        self.time_of_warning = time_of_warning.astimezone(ZoneInfo("America/Chicago"))
+    # def __init__(
+    #     self,
+    #     person_warned: TwitchUser,
+    #     reason_for_warning: str | None,
+    #     rules_cited: list[str] | None,
+    #     time_of_warning: datetime,
+    # ):
+    person: TwitchUser
+    reason: str | None
+    time_of_warning: datetime
+    rules_cited: str = ""
 
-        if rules_cited is None:
+    def __post_init__(self):
+
+        self.reason = self.reason if self.reason else "No Reason Given"
+        self.time_of_warning = self.time_of_warning.astimezone(ZoneInfo("America/Chicago"))
+
+        if self.rules_cited is None:
             self.rules_cited = "No Rule Cited"
             return
 
-        for rule in rules_cited:
+        for rule in self.rules_cited:
             self.rules_cited += rule + "\n"
