@@ -18,6 +18,7 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 
 from bots.discord_bot import DavexDiscordBot
+from bots.twitchStuff.customCommands.sql import get_commands
 from sql import add_ban, add_timeout, add_warning, remove_ban, save_deleted_message, save_message
 from utils import TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
 
@@ -78,6 +79,10 @@ class DavexTwitchBot:
             content=message.text,
         )
         await save_message(_message)
+
+        commands = {command.name: command.reply for command in await get_commands()}
+        if message.text.split()[0] in commands:
+            await message.reply(commands[message.text.split()[0]])
         return
 
     async def on_ready(self, ready_event: EventData):
