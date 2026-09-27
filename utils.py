@@ -85,6 +85,7 @@ class TwitchCommand:
     name: str
     reply: str
     level: CommandLevels
+    active: bool
 
 
 @dataclass()
