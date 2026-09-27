@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from enum import StrEnum
 from zoneinfo import ZoneInfo
 
 
@@ -69,6 +70,21 @@ class TwitchWarning:
 
         for rule in self.rules_cited:
             self.rules_cited += rule + "\n"
+
+
+class CommandLevels(StrEnum):
+    EVERYONE = "Everyone"
+    SUBSCRIBER = "Subscriber"
+    VIP = "Vip"
+    MOD = "Moderator"
+    STREAMER = "Broadcaster"
+
+
+@dataclass()
+class TwitchCommand:
+    name: str
+    reply: str
+    level: CommandLevels
 
 
 @dataclass()
