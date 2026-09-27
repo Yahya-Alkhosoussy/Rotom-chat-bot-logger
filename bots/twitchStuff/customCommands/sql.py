@@ -18,7 +18,8 @@ async def init_db():
                 name TEXT,
                 reply TEXT,
                 user_level TEXT,
-                active bool
+                active bool,
+                streamer TEXT DEFAULT 'davex_gundyr'
             )
             """
         )
