@@ -73,11 +73,11 @@ class TwitchWarning:
 
 
 class CommandLevels(StrEnum):
-    EVERYONE = "Everyone"
-    SUBSCRIBER = "Subscriber"
-    VIP = "Vip"
-    MOD = "Moderator"
-    STREAMER = "Broadcaster"
+    EVERYONE = "everyone"
+    SUBSCRIBER = "subscriber"
+    VIP = "vip"
+    MOD = "moderator"
+    STREAMER = "broadcaster"
 
 
 @dataclass()
