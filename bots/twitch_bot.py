@@ -20,7 +20,7 @@ from twitchAPI.type import AuthScope, ChatEvent
 from bots.discord_bot import DavexDiscordBot
 from bots.twitchStuff.customCommands.sql import get_commands
 from sql import add_ban, add_timeout, add_warning, remove_ban, save_deleted_message, save_message
-from utils import TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
+from utils import CommandLevels, TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
 
 TARGET_CHANNELS = ["davex_gundyr"]
 
@@ -71,6 +71,37 @@ class DavexTwitchBot:
 
         self.chat = await Chat(self.bot_twitch)
 
+    def __is_command_level_met(self, command_level: CommandLevels, message: ChatMessage) -> bool:
+        assert message.room
+        match command_level:
+            case CommandLevels.EVERYONE:
+                return True
+            case CommandLevels.MOD:
+                is_mod = message.user.mod or any(b in message.user.badges for b in ("moderator", "broadcaster"))
+                if is_mod:
+                    return True
+                else:
+                    return False
+            case CommandLevels.SUBSCRIBER:
+                is_sub = message.user.subscriber or any(b in message.user.badges for b in ("subscriber", "founder"))
+                if is_sub:
+                    return True
+                else:
+                    return False
+            case CommandLevels.STREAMER:
+                if message.user.name == message.room.name:
+                    return True
+                else:
+                    return False
+            case CommandLevels.VIP:
+                is_vip = message.user.vip or "vip" in message.user.badges
+                if is_vip:
+                    return True
+                else:
+                    return False
+            case _:
+                raise ValueError("Invalid Command Level")
+
     async def on_message(self, message: ChatMessage):
         _message = TwitchMessage(
             message.id,
@@ -80,9 +111,13 @@ class DavexTwitchBot:
         )
         await save_message(_message)
 
-        commands = {command.name: command.reply for command in await get_commands()}
+        commands = {command.name: (command.reply, command.level) for command in await get_commands()}
         if message.text.split()[0] in commands:
-            await message.reply(commands[message.text.split()[0]])
+            reply = commands[message.text.split()[0]][0]
+            level = commands[message.text.split()[0]][1]
+            level_met = self.__is_command_level_met(level, message)
+            if level_met:
+                await message.reply(reply)
         return
 
     async def on_ready(self, ready_event: EventData):
