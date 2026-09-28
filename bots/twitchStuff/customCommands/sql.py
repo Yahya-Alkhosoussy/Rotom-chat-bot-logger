@@ -33,7 +33,7 @@ async def get_commands() -> list[TwitchCommand]:
             commands: list[TwitchCommand] = []
             for result in results:
                 commands.append(
-                    TwitchCommand(name=result[0], reply=result[1], level=CommandLevels(result[2]), active=result[3])
+                    TwitchCommand(name=result[0], reply=result[1], level=CommandLevels(result[2].lower()), active=result[3])
                 )
 
     return commands
