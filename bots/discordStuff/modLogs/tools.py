@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from bots.discordStuff.modLogs.sql import get_deleted_messages
-from bots.discordStuff.sharedBanLists.sql import add_to_ban_list
+from bots.discordStuff.sharedBanLists.sql import add_to_ban_list, set_as_unbanned
 from utils import DiscordUser
 
 
@@ -159,6 +159,8 @@ class Moderation(commands.Cog):
             f"Moderator responsible: {unban_log.user.name if unban_log.user else 'unknown moderator'}\n"
             f"Reason: {unban_log.reason if unban_log.reason else 'No reason was given.'}"
         )
+
+        await set_as_unbanned(user)
 
     @commands.Cog.listener()
     async def on_member_remove(self, user: discord.Member):
