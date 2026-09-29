@@ -8,6 +8,7 @@ import discord
 from discord.ext import commands
 
 from bots.discordStuff.modLogs.sql import add_deleted_message
+from bots.discordStuff.modLogs.tools import Moderation
 from bots.discordStuff.sharedBanLists.sql import check_if_user_in_ban_list, get_banned_member
 from sql import get_bans, get_deleted_messages, get_timeouts, get_warnings
 from utils import DiscordMessage, DiscordUser, TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
@@ -16,6 +17,7 @@ from utils import DiscordMessage, DiscordUser, TwitchBan, TwitchMessage, TwitchU
 class DavexDiscordBot(commands.Bot):
     def __init__(self, intents: discord.Intents, **kwargs):
         super().__init__(command_prefix="!", intents=intents, **kwargs)
+        self.moderation: Moderation | None = None
         self.twitch_moderation_loop: TwitchModerationLoop | None = None
         self.mod_channel: discord.abc.GuildChannel | discord.Thread | discord.abc.PrivateChannel | None = None
 
@@ -23,6 +25,7 @@ class DavexDiscordBot(commands.Bot):
         assert self.user is not None
         self.twitch_moderation_loop = TwitchModerationLoop(self)
         self.mod_channel = self.get_channel(1516090780173860914)
+        self.moderation = Moderation(self)
         assert isinstance(self.mod_channel, discord.TextChannel), "Discord channel is the wrong type"
         print("")
         print(f"Logged in as {self.user} (ID: {self.user.id})")
