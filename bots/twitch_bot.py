@@ -212,6 +212,32 @@ class DavexTwitchBot:
         message = f"{ChatCommand.user.name}, I have appeared in the Graveyard! Thank you kind soul."
         await self.bot_twitch.send_chat_message(broadcaster_id=self.davex_id, sender_id=self.bot_id, message=message)
 
+    async def clip_command(self, cmd: ChatCommand):
+        assert self.dav_twitch
+        assert self.davex_id
+        assert self.chat
+        assert cmd.room
+
+        try:
+            created_clip = await self.dav_twitch.create_clip(self.davex_id)
+        except Exception as e:
+            await cmd.reply("Sorry, but I could not make a clip, please try again.")
+            print(str(e))
+            return
+
+        clip = await first(self.dav_twitch.get_clips(clip_id=[created_clip.id]))
+        if clip is None:
+            for _ in range(40):
+                await asyncio.sleep(1.5)
+                clip = await first(self.dav_twitch.get_clips(clip_id=[created_clip.id]))
+                if clip is not None:
+                    break
+
+        if clip is None:
+            await self.chat.send_message(room=cmd.room.name, text="Sorry, but I could not find the clip that was created")
+            return
+        await self.chat.send_message(room=cmd.room.name, text=f"Here is your clip @{cmd.user.name}! {clip.url}")
+
     async def run(self):
         try:
             await self.setup()
@@ -226,6 +252,7 @@ class DavexTwitchBot:
             self.chat.register_event(ChatEvent.READY, self.on_ready)
             self.chat.register_event(ChatEvent.MESSAGE, self.on_message)
             self.chat.register_command("appear", self.appear_command)
+            self.chat.register_command("clip", self.clip_command)
 
             await self.dav_eventsub.listen_channel_ban(broadcaster_user_id=self.davex_id, callback=self.on_ban)
             await self.dav_eventsub.listen_channel_unban(broadcaster_user_id=self.davex_id, callback=self.on_unban)
