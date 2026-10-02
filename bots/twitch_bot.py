@@ -115,10 +115,13 @@ class DavexTwitchBot:
         )
         await save_message(_message)
 
-        commands = {command.name: (command.reply, command.level) for command in await get_commands()}
+        commands = {command.name: (command.reply, command.level, command.active) for command in await get_commands()}
         if message.text.split()[0] in commands:
             reply = commands[message.text.split()[0]][0]
             level = commands[message.text.split()[0]][1]
+            active = commands[message.text.split()[0]][2]
+            if not active:
+                return
             level_met = self.__is_command_level_met(level, message)
             if level_met:
                 await message.reply(reply)
