@@ -84,7 +84,10 @@ class DavexTwitchBot:
                     return False
             case CommandLevels.SUBSCRIBER:
                 is_sub = message.user.subscriber or any(b in message.user.badges for b in ("subscriber", "founder"))
-                if is_sub:
+                is_vip = message.user.vip or "vip" in message.user.badges
+                is_mod = message.user.mod or any(b in message.user.badges for b in ("moderator", "broadcaster"))
+
+                if is_sub or is_vip or is_mod:
                     return True
                 else:
                     return False
@@ -95,7 +98,8 @@ class DavexTwitchBot:
                     return False
             case CommandLevels.VIP:
                 is_vip = message.user.vip or "vip" in message.user.badges
-                if is_vip:
+                is_mod = message.user.mod or any(b in message.user.badges for b in ("moderator", "broadcaster"))
+                if is_vip or is_mod:
                     return True
                 else:
                     return False
