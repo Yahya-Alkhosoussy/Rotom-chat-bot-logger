@@ -145,6 +145,8 @@ async def restart(ctx: commands.Context, stash: bool):
 
     subprocess.Popen([sys.executable] + sys.argv)
 
+    await twitch_mod_bot.close_bot() # Closes the twitch bot normally
+
     await bot.close()  # closes the bot normally
 
 async def main():
