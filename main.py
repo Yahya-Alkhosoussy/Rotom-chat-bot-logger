@@ -6,12 +6,15 @@ import sys
 from os import getenv
 
 import discord
+import uvicorn
 from discord.ext import commands
 from dotenv import load_dotenv
+from fastapi import FastAPI
 from twitchAPI.type import AuthScope
 
 from bots.discord_bot import DavexDiscordBot
 from bots.twitch_bot import DavexTwitchBot
+from utils import CommandLevels, TwitchCommand, TwitchCommandFromWeb
 
 load_dotenv()
 
@@ -151,10 +154,41 @@ async def restart(ctx: commands.Context, stash: bool):
     await bot.close()  # closes the bot normally
 
 
+# Fast API is for website pings.
+app = FastAPI()
+
+
+@app.post("/api/v1/update_commands")
+async def command_added(command: TwitchCommandFromWeb):
+    print("Adding command")
+    temp_command = TwitchCommand("", "", CommandLevels.EVERYONE, False)
+    await twitch_mod_bot.add_command(temp_command.from_pydantic(command))
+    print("command was added")
+    return {"status": "ok"}, 200
+
+
+@app.post("/api/v1/delete_command")
+async def command_deleted(command: TwitchCommandFromWeb):
+    print("Deleting command")
+    temp_command = TwitchCommand("", "", CommandLevels.EVERYONE, False)
+    await twitch_mod_bot.delete_command(temp_command.from_pydantic(command))
+    print("Command deleted")
+    return {"status": "ok"}, 200
+
+
 async def main():
     token = getenv("discord_token")
     assert token
-    await asyncio.gather(bot.start(token=token), twitch_mod_bot.run(), return_exceptions=True)
+
+    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+
+    await asyncio.gather(
+        bot.start(token=token),
+        twitch_mod_bot.run(),
+        server.serve(),
+        return_exceptions=True,
+    )
 
 
 if __name__ == "__main__":
