@@ -21,7 +21,7 @@ from twitchAPI.type import AuthScope, ChatEvent
 from bots.discord_bot import DavexDiscordBot
 from bots.twitchStuff.customCommands.sql import get_commands
 from sql import add_ban, add_timeout, add_warning, remove_ban, save_deleted_message, save_message
-from utils import CommandLevels, TwitchBan, TwitchMessage, TwitchUser, TwitchWarning
+from utils import CommandLevels, TwitchBan, TwitchCommand, TwitchMessage, TwitchUser, TwitchWarning
 
 TARGET_CHANNELS = ["davex_gundyr"]
 
@@ -43,6 +43,7 @@ class DavexTwitchBot:
         self.davex_id: str | None = None
         self.bot_id: str | None = None
         self.discord_bot: DavexDiscordBot = discord_bot
+        self.commands: dict[str, TwitchCommand] = {}
 
     async def setup(self):
         self.dav_twitch = await Twitch(self.app_id, self.app_secret)
@@ -71,6 +72,9 @@ class DavexTwitchBot:
         self.bot_eventsub.start()
 
         self.chat = await Chat(self.bot_twitch)
+
+        for command in await get_commands():
+            self.commands[command.name] = command
 
     def __is_command_level_met(self, command_level: CommandLevels, message: ChatMessage) -> bool:
         assert message.room
@@ -126,6 +130,12 @@ class DavexTwitchBot:
             message = message.replace(r"${random}", str(number))
         return message
 
+    async def add_command(self, command: TwitchCommand):
+        self.commands[command.name] = command
+
+    async def delete_command(self, command: TwitchCommand):
+        self.commands.pop(command.name)
+
     async def on_message(self, message: ChatMessage):
         _message = TwitchMessage(
             message.id,
@@ -135,16 +145,13 @@ class DavexTwitchBot:
         )
         await save_message(_message)
 
-        commands = {command.name: (command.reply, command.level, command.active) for command in await get_commands()}
-        if message.text.split()[0] in commands:
-            reply = commands[message.text.split()[0]][0]
-            level = commands[message.text.split()[0]][1]
-            active = commands[message.text.split()[0]][2]
-            if not active:
+        if message.text.split()[0] in self.commands:
+            command = self.commands[message.text.split()[0]]
+            if not command.active:
                 return
-            level_met = self.__is_command_level_met(level, message)
+            level_met = self.__is_command_level_met(command.level, message)
             if level_met:
-                command_reply = await self.__deal_with_variables(reply, message)
+                command_reply = await self.__deal_with_variables(command.reply, message)
                 await message.reply(command_reply)
         return
 
