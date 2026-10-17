@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from zoneinfo import ZoneInfo
 
+from pydantic import BaseModel
+
 
 @dataclass()
 class TwitchUser:
@@ -26,14 +28,6 @@ class TwitchMessage:
 
 @dataclass()
 class TwitchBan:
-    # def __init__(
-    #     self,
-    #     banned_person: TwitchUser,
-    #     reason_for_ban: str,
-    #     mod_responsible: str,
-    #     time_banned: datetime,
-    #     duration: timedelta | None = None,
-    # ):
     person: TwitchUser
     reason: str
     mod_responsible: str
@@ -47,13 +41,6 @@ class TwitchBan:
 
 @dataclass()
 class TwitchWarning:
-    # def __init__(
-    #     self,
-    #     person_warned: TwitchUser,
-    #     reason_for_warning: str | None,
-    #     rules_cited: list[str] | None,
-    #     time_of_warning: datetime,
-    # ):
     person: TwitchUser
     reason: str | None
     time_of_warning: datetime
@@ -80,12 +67,27 @@ class CommandLevels(StrEnum):
     STREAMER = "broadcaster"
 
 
+class TwitchCommandFromWeb(BaseModel):
+    name: str
+    reply: str
+    level: str
+    active: bool
+
+
 @dataclass()
 class TwitchCommand:
     name: str
     reply: str
     level: CommandLevels
     active: bool
+
+    def from_pydantic(self, command: TwitchCommandFromWeb):
+        return TwitchCommand(
+            command.name,
+            command.reply,
+            CommandLevels(command.level.lower()),
+            command.active,
+        )
 
 
 @dataclass()
