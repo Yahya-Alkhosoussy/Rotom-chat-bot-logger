@@ -1,9 +1,9 @@
 import asyncio
-from os import getenv
 import os
-import subprocess
 import shutil
+import subprocess
 import sys
+from os import getenv
 
 import discord
 from discord.ext import commands
@@ -81,9 +81,10 @@ async def get_deleted_messages(ctx: commands.Context):
     assert bot.twitch_moderation_loop
     await bot.twitch_moderation_loop.deleted_messages_requested(ctx=ctx)
 
+
 def get_full_path():
-    
     import winreg
+
     with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment") as key:
         system_path, _ = winreg.QueryValueEx(key, "Path")
 
@@ -145,9 +146,10 @@ async def restart(ctx: commands.Context, stash: bool):
 
     subprocess.Popen([sys.executable] + sys.argv)
 
-    await twitch_mod_bot.close_bot() # Closes the twitch bot normally
+    await twitch_mod_bot.close_bot()  # Closes the twitch bot normally
 
     await bot.close()  # closes the bot normally
+
 
 async def main():
     token = getenv("discord_token")
