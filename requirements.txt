@@ -4,3 +4,5 @@ aiosqlite
 discord
 twitchAPI
 tzdata
+fastapi
+uvicorn
