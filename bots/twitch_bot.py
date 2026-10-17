@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from pathlib import Path
+from random import randint
 from zoneinfo import ZoneInfo
 
 from twitchAPI.chat import Chat, ChatCommand, ChatMessage, EventData
@@ -106,6 +107,25 @@ class DavexTwitchBot:
             case _:
                 raise ValueError("Invalid Command Level")
 
+    async def __deal_with_variables(self, message: str, msg: ChatMessage) -> str:
+        assert msg.room and self.bot_twitch
+        if r"${user}" in message:
+            message = message.replace(r"${user}", msg.user.display_name)
+        if r"${game}" in message:
+            stream = await first(self.bot_twitch.get_streams(user_id=[msg.room.room_id]))
+
+            if stream:
+                game = stream.game_name
+            else:
+                channel_info = await self.bot_twitch.get_channel_information(broadcaster_id=msg.room.room_id)
+                game = channel_info[0].game_name
+
+            message = message.replace(r"${game}", game)
+        if r"${random}" in message:
+            number = randint(0, 300)
+            message = message.replace(r"${random}", str(number))
+        return message
+
     async def on_message(self, message: ChatMessage):
         _message = TwitchMessage(
             message.id,
@@ -124,7 +144,8 @@ class DavexTwitchBot:
                 return
             level_met = self.__is_command_level_met(level, message)
             if level_met:
-                await message.reply(reply)
+                command_reply = await self.__deal_with_variables(reply, message)
+                await message.reply(command_reply)
         return
 
     async def on_ready(self, ready_event: EventData):
