@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import StrEnum
+from enum import Flag, auto
+from functools import reduce
+from operator import or_
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
@@ -59,12 +61,22 @@ class TwitchWarning:
             self.rules_cited += rule + "\n"
 
 
-class CommandLevels(StrEnum):
-    EVERYONE = "everyone"
-    SUBSCRIBER = "subscriber"
-    VIP = "vip"
-    MOD = "moderator"
-    STREAMER = "broadcaster"
+class CommandLevels(Flag):
+    STREAMER = auto()
+    MOD = auto()
+    VIP = auto()
+    SUBSCRIBER = auto()
+    EVERYONE = 0
+
+    @classmethod
+    def parse(cls, text: str) -> "CommandLevels":
+        aliases = {"moderator": "MOD", "broadcaster": "STREAMER"}
+        parts = [p.strip().lower() for p in text.split("|") if p.strip()]
+        names = [aliases.get(p, p).upper() for p in parts]
+        return reduce(or_, (cls[n] for n in names), cls.EVERYONE)
+
+    def allows(self, user_roles: "CommandLevels") -> bool:
+        return not self or bool(self & user_roles)
 
 
 class TwitchCommandFromWeb(BaseModel):
@@ -82,10 +94,12 @@ class TwitchCommand:
     active: bool
 
     def from_pydantic(self, command: TwitchCommandFromWeb):
+        if not command.name.startswith("!"):
+            command.name = "!" + command.name
         return TwitchCommand(
             command.name,
             command.reply,
-            CommandLevels(command.level.lower()),
+            CommandLevels.parse(command.level.lower()),
             command.active,
         )
 
