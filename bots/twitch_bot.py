@@ -76,40 +76,22 @@ class DavexTwitchBot:
         for command in await get_commands():
             self.commands[command.name] = command
 
-    def __is_command_level_met(self, command_level: CommandLevels, message: ChatMessage) -> bool:
+    def __get_user_roles(self, message: ChatMessage) -> CommandLevels:
         assert message.room
-        match command_level:
-            case CommandLevels.EVERYONE:
-                return True
-            case CommandLevels.MOD:
-                is_mod = message.user.mod or any(b in message.user.badges for b in ("moderator", "broadcaster"))
-                if is_mod:
-                    return True
-                else:
-                    return False
-            case CommandLevels.SUBSCRIBER:
-                is_sub = message.user.subscriber or any(b in message.user.badges for b in ("subscriber", "founder"))
-                is_vip = message.user.vip or "vip" in message.user.badges
-                is_mod = message.user.mod or any(b in message.user.badges for b in ("moderator", "broadcaster"))
+        user = message.user
+        badge = user.badges
 
-                if is_sub or is_vip or is_mod:
-                    return True
-                else:
-                    return False
-            case CommandLevels.STREAMER:
-                if message.user.name == message.room.name:
-                    return True
-                else:
-                    return False
-            case CommandLevels.VIP:
-                is_vip = message.user.vip or "vip" in message.user.badges
-                is_mod = message.user.mod or any(b in message.user.badges for b in ("moderator", "broadcaster"))
-                if is_vip or is_mod:
-                    return True
-                else:
-                    return False
-            case _:
-                raise ValueError("Invalid Command Level")
+        roles = CommandLevels.EVERYONE
+        if user.subscriber or any(b in badge for b in ("subscriber", "founder")):
+            roles |= CommandLevels.SUBSCRIBER
+        if user.vip or "vip" in badge:
+            roles |= CommandLevels.VIP
+        if user.mod or any(b in badge for b in ("moderator", "broadcaster")):
+            roles |= CommandLevels.MOD
+        if "broadcaster" in badge:
+            roles |= CommandLevels.STREAMER
+
+        return roles
 
     async def __deal_with_variables(self, message: str, msg: ChatMessage) -> str:
         assert msg.room and self.bot_twitch
@@ -149,7 +131,8 @@ class DavexTwitchBot:
             command = self.commands[message.text.split()[0]]
             if not command.active:
                 return
-            level_met = self.__is_command_level_met(command.level, message)
+            user_level = self.__get_user_roles(message)
+            level_met = command.level.allows(user_level)
             if level_met:
                 command_reply = await self.__deal_with_variables(command.reply, message)
                 await message.reply(command_reply)
