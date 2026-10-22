@@ -18,7 +18,6 @@ from utils import DiscordMessage, DiscordUser, TwitchBan, TwitchMessage, TwitchU
 class DavexDiscordBot(commands.Bot):
     def __init__(self, intents: discord.Intents, **kwargs):
         super().__init__(command_prefix="!", intents=intents, **kwargs)
-        self.moderation: Moderation = Moderation(self)
         self.ban_list_checker: BanListChecker = BanListChecker(self)
         self.twitch_moderation_loop: TwitchModerationLoop | None = None
         self.mod_channel: discord.abc.GuildChannel | discord.Thread | discord.abc.PrivateChannel | None = None
@@ -32,6 +31,11 @@ class DavexDiscordBot(commands.Bot):
         print("")
         print(f"Logged in as {self.user} (ID: {self.user.id})")
         print("----------------------------------------------")
+
+    async def setup_hook(self) -> None:
+        await self.add_cog(Moderation(self))
+        cog = self.get_cog("Moderation")
+        assert isinstance(cog, Moderation), f"Cog not found, type: {type(cog)}"
 
     async def on_member_join(self, member: discord.Member):
         assert isinstance(self.mod_channel, discord.TextChannel), "Discord channel is the wrong type"
