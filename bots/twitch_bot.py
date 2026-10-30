@@ -4,7 +4,7 @@ from pathlib import Path
 from random import randint
 from zoneinfo import ZoneInfo
 
-from twitchAPI.chat import Chat, ChatCommand, ChatMessage, EventData
+from twitchAPI.chat import Chat, ChatCommand, ChatMessage, ChatRoom, ChatUser, EventData
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
 from twitchAPI.oauth import UserAuthenticationStorageHelper
@@ -19,7 +19,7 @@ from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope, ChatEvent
 
 from bots.discord_bot import DavexDiscordBot
-from bots.twitchStuff.customCommands.sql import get_commands
+from bots.twitchStuff.customCommands.sql import get_commands, get_standard_command_by_name
 from sql import add_ban, add_timeout, add_warning, remove_ban, save_deleted_message, save_message
 from utils import CommandLevels, TwitchBan, TwitchCommand, TwitchMessage, TwitchUser, TwitchWarning
 
@@ -93,17 +93,24 @@ class DavexTwitchBot:
 
         return roles
 
-    async def __deal_with_variables(self, message: str, msg: ChatMessage) -> str:
-        assert msg.room and self.bot_twitch
+    async def __deal_with_variables(self, message: str, msg: ChatMessage | ChatUser, room: ChatRoom | None = None) -> str:
+        if isinstance(msg, ChatMessage):
+            user = msg.user
+            room = msg.room
+        else:
+            user = msg
+
+        assert room and self.bot_twitch
+
         if r"${user}" in message:
-            message = message.replace(r"${user}", msg.user.display_name)
+            message = message.replace(r"${user}", user.display_name)
         if r"${game}" in message:
-            stream = await first(self.bot_twitch.get_streams(user_id=[msg.room.room_id]))
+            stream = await first(self.bot_twitch.get_streams(user_id=[room.room_id]))
 
             if stream:
                 game = stream.game_name
             else:
-                channel_info = await self.bot_twitch.get_channel_information(broadcaster_id=msg.room.room_id)
+                channel_info = await self.bot_twitch.get_channel_information(broadcaster_id=room.room_id)
                 game = channel_info[0].game_name
 
             message = message.replace(r"${game}", game)
@@ -223,14 +230,20 @@ class DavexTwitchBot:
         assert self.bot_twitch
         assert self.davex_id
         assert self.bot_id
-        message = f"{ChatCommand.user.name}, I have appeared in the Graveyard! Thank you kind soul."
-        await self.bot_twitch.send_chat_message(broadcaster_id=self.davex_id, sender_id=self.bot_id, message=message)
+        command = await get_standard_command_by_name("appear")
+        reply = await self.__deal_with_variables(command.reply, ChatCommand.user, ChatCommand.room)
+        await self.bot_twitch.send_chat_message(broadcaster_id=self.davex_id, sender_id=self.bot_id, message=reply)
 
     async def clip_command(self, cmd: ChatCommand):
         assert self.dav_twitch
         assert self.davex_id
         assert self.chat
         assert cmd.room
+
+        command = await get_standard_command_by_name("clip")
+
+        if not command.active:
+            return  # don't do anything if the clip command is off
 
         try:
             created_clip = await self.dav_twitch.create_clip(self.davex_id)
@@ -250,7 +263,8 @@ class DavexTwitchBot:
         if clip is None:
             await self.chat.send_message(room=cmd.room.name, text="Sorry, but I could not find the clip that was created")
             return
-        await self.chat.send_message(room=cmd.room.name, text=f"Here is your clip @{cmd.user.name}! {clip.url}")
+        reply = await self.__deal_with_variables(command.reply, cmd.user, cmd.room)
+        await self.chat.send_message(room=cmd.room.name, text=f"{reply} {clip.url}")
 
     async def run(self):
         try:
