@@ -23,6 +23,19 @@ async def init_db():
             )
             """
         )
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS standard_commands
+            (
+                id INTEGER PRIMARY KEY,
+                name TEXT,
+                reply TEXT,
+                user_level TEXT,
+                active BOOL,
+                streamer TEXT DEFAULT 'davex_gundyr'
+            )
+            """
+        )
         await conn.commit()
 
 
@@ -39,6 +52,24 @@ async def get_commands() -> list[TwitchCommand]:
                 )
 
     return commands
+
+
+async def add_standard_command(command: TwitchCommand):
+    async with connect(db_path) as conn:
+        await conn.execute(
+            "INSERT OR IGNORE INTO standard_commands (name, reply, user_level, active) VALUES (?, ?, ?, ?)",
+            (command.name, command.reply, command.level.value, command.active),
+        )
+        await conn.commit()
+
+
+async def get_standard_command_by_name(name: str) -> TwitchCommand:
+    async with connect(db_path) as conn:
+        cur = await conn.execute("SELECT name, reply, user_level, active FROM standard_commands WHERE name=?", (name,))
+        result = await cur.fetchone()
+        if result is None:
+            raise LookupError(f"Could not find the standard command {name}")
+        return TwitchCommand(name=result[0], reply=result[1], level=CommandLevels(result[2].lower()), active=bool(result[3]))
 
 
 run(init_db())
