@@ -38,6 +38,7 @@ DAVEX_SCOPES = [
     AuthScope.MODERATOR_READ_UNBAN_REQUESTS,
     AuthScope.MODERATOR_READ_WARNINGS,
     AuthScope.CLIPS_EDIT,
+    AuthScope.MODERATOR_MANAGE_BANNED_USERS,
 ]
 
 BOT_SCOPES = [
@@ -174,6 +175,11 @@ async def command_deleted(command: TwitchCommandFromWeb):
     await twitch_mod_bot.delete_command(temp_command.from_pydantic(command))
     print("Command deleted")
     return {"status": "ok"}, 200
+
+
+@app.post("/api/v1/twitch_ban/update")
+async def ban_update():
+    pass
 
 
 async def main():
