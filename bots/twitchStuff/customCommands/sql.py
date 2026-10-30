@@ -69,7 +69,9 @@ async def get_standard_command_by_name(name: str) -> TwitchCommand:
         result = await cur.fetchone()
         if result is None:
             raise LookupError(f"Could not find the standard command {name}")
-        return TwitchCommand(name=result[0], reply=result[1], level=CommandLevels(result[2].lower()), active=bool(result[3]))
+        return TwitchCommand(
+            name=result[0], reply=result[1], level=CommandLevels.parse(result[2].lower()), active=bool(result[3])
+        )
 
 
 run(init_db())
