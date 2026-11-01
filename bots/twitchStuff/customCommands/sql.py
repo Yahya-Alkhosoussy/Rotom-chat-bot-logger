@@ -65,13 +65,11 @@ async def add_standard_command(command: TwitchCommand):
 
 async def get_standard_command_by_name(name: str) -> TwitchCommand:
     async with connect(db_path) as conn:
-        cur = await conn.execute("SELECT name, reply, user_level, active FROM standard_commands WHERE name=?", (name,))
+        cur = await conn.execute("SELECT reply, user_level, active FROM standard_commands WHERE name=?", (name,))
         result = await cur.fetchone()
         if result is None:
             raise LookupError(f"Could not find the standard command {name}")
-        return TwitchCommand(
-            name=result[0], reply=result[1], level=CommandLevels.parse(result[2].lower()), active=bool(result[3])
-        )
+        return TwitchCommand(name=name, reply=result[0], level=CommandLevels.parse(result[1].lower()), active=bool(result[2]))
 
 
 run(init_db())
