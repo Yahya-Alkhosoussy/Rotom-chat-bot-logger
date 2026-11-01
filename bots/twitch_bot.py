@@ -230,7 +230,7 @@ class DavexTwitchBot:
         assert self.bot_twitch
         assert self.davex_id
         assert self.bot_id
-        command = await get_standard_command_by_name("appear")
+        command = await get_standard_command_by_name("!appear")
         reply = await self.__deal_with_variables(command.reply, ChatCommand.user, ChatCommand.room)
         await self.bot_twitch.send_chat_message(broadcaster_id=self.davex_id, sender_id=self.bot_id, message=reply)
 
@@ -240,7 +240,7 @@ class DavexTwitchBot:
         assert self.chat
         assert cmd.room
 
-        command = await get_standard_command_by_name("clip")
+        command = await get_standard_command_by_name("!clip")
 
         if not command.active:
             return  # don't do anything if the clip command is off
